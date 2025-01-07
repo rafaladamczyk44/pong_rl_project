@@ -36,22 +36,24 @@ config = (
             enable_rl_module_and_learner=False,
             enable_env_runner_and_connector_v2=False
         )
-    .env_runners(num_env_runners=2)
+    .env_runners(num_env_runners=4) # 4 runners for better exploration
     .training(
         model={'custom_model': 'DQN_Model'},
         gamma=0.99,
-        lr=3e-4,
+        lr=1e-4,
         dueling=True,
         double_q=True, # Use double Q-learning
-        epsilon=[[0, 1.0], [50000, 0.1], [100000, 0.05]], # Epsilon decay
-        train_batch_size=32,
+        epsilon=[[0, 1.0], [100000, 0.1], [500000, 0.01]], # Epsilon decay
+        train_batch_size=64,
         replay_buffer_config={
-            "type": "MultiAgentPrioritizedReplayBuffer",  # Compatible replay buffer
-            "capacity": 50000, # buffer capacity
-            "prioritized_replay_alpha": 0.6,  # Alpha for prioritization
-            "prioritized_replay_beta": 0.4,  # Beta for importance-sampling weights
-            "prioritized_replay_eps": 1e-6,  # Small epsilon to prevent zero probability
+            "type": "MultiAgentPrioritizedReplayBuffer",
+            "capacity": 100000,
+            "prioritized_replay_alpha": 0.6,
+            "prioritized_replay_beta": 0.4,
+            "prioritized_replay_eps": 1e-6,
         },
+        target_network_update_freq=1000,
+        grad_clip=1.0,
     )
 )
 
