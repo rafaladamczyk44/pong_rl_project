@@ -17,20 +17,25 @@ class DQNModel(TorchModelV2, nn.Module):
         TorchModelV2.__init__(self, observation_space, action_space, num_outputs, model_config, name)
         nn.Module.__init__(self)
 
+        # Define CNN layers
+        input_shape = observation_space.shape  # 84 x 84 x 4
+        input_shape = input_shape[-1]  # Only taking channel value
+
         # Activation for all layers
         self.relu = nn.ReLU()
 
-        # Define CNN layers
-        input_shape = observation_space.shape  # 84 x 84 x 4
-        print(input_shape[-1])
-        input_shape = input_shape[-1]  # Only taking channel value
+        # Conv layers + batch norm
         self.conv1 = nn.Conv2d(input_shape, 32, 8, 4)
+        self.bn1 = nn.BatchNorm2d(32)
         self.conv2 = nn.Conv2d(32, 64, 4, 2)
+        self.bn2 = nn.BatchNorm2d(64)
         self.conv3 = nn.Conv2d(64, 64, 3, 1)
+        self.bn3 = nn.BatchNorm2d(64)
 
         # FC Network
         self.fc1 = nn.Linear(7 * 7 * 64, 512)
-        self.fc2 = nn.Linear(512, out_features=num_outputs)
+        self.fc_bn = nn.BatchNorm1d(512)
+        self.fc2 = nn.Linear(512, num_outputs)
 
     def forward(self, input_dict, state, seq_lens):
         """
@@ -38,19 +43,13 @@ class DQNModel(TorchModelV2, nn.Module):
         Observation dict is of shape: torch.Size([32, 84, 84, 4])
         Need to permute it to batch, channel, height, width for Conv layers
         """
-        # print(input_dict['obs'].size())
-        x = input_dict['obs'].permute(0, 3, 1, 2).float() # Permuting for correct shape: batch, channels, height, width
-        # print(x.size())
+        x = input_dict['obs'].permute(0, 3, 1, 2).float() / 255.0  # Added normalization
 
-        # Convolution layers pass
-        x = self.relu(self.conv1(x))
-        x = self.relu(self.conv2(x))
-        x = self.relu(self.conv3(x))
+        x = self.bn1(self.relu(self.conv1(x)))
+        x = self.bn2(self.relu(self.conv2(x)))
+        x = self.bn3(self.relu(self.conv3(x)))
 
-        # print(f'Shape before reshape: {x.size()}')
-        x = x.reshape(x.size(0), -1) # Flatten
-        # print(f'Shape after reshape: {x.size()}')
-
-        x = self.relu(self.fc1(x))
+        x = x.reshape(x.size(0), -1)
+        x = self.fc_bn(self.relu(self.fc1(x)))
         x = self.fc2(x)
         return x, state
