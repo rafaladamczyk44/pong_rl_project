@@ -10,18 +10,17 @@ class DQNModel(TorchModelV2, nn.Module):
 
         :param observation_space: Current state of the game at each timestamp
         :param action_space: Available actions to take by the agent (6 in Pong)
-        :param num_outputs: Number of output neurons
+        :param num_outputs: Number of output neurons - 6 discrete actions
         :param model_config: Model configuration, policy, number of workers, etc.
         :param name: Model's name used by rllib
         """
         TorchModelV2.__init__(self, observation_space, action_space, num_outputs, model_config, name)
         nn.Module.__init__(self)
 
-        # Define CNN layers
         input_shape = observation_space.shape  # 84 x 84 x 4
         input_shape = input_shape[-1]  # Only taking channel value
 
-        # Activation for all layers
+        # ReLu acitvation
         self.relu = nn.ReLU()
 
         # Conv layers + batch norm
@@ -52,8 +51,8 @@ class DQNModel(TorchModelV2, nn.Module):
         Passing the observations
         """
         # Observation dict is of shape: torch.Size([32, 84, 84, 4])
-        # Permute the matrix
-        x = input_dict['obs'].permute(0, 3, 1, 2).float() / 255.0  # Added normalization
+        # Permute the matrix, add normalization
+        x = input_dict['obs'].permute(0, 3, 1, 2).float() / 255.0
 
         x = self.bn1(self.relu(self.conv1(x)))
         x = self.bn2(self.relu(self.conv2(x)))
