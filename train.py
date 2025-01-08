@@ -114,11 +114,10 @@ for epoch in range(1000):
         print(f"\n>>> New best reward: {best_reward:.2f} <<<\n")
 
     if epoch % 100 == 0:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        checkpoint_path = f"checkpoints/checkpoint_epoch{epoch}_{timestamp}"
+        timestamp = datetime.now().strftime("%d%m%Y_%H%M%S")
+        checkpoint_path = f"checkpoints/chkpt_e{epoch}_{timestamp}"
         try:
             agent.save(checkpoint_path)
-            print(f"\nCheckpoint saved: {checkpoint_path}")
         except Exception as e:
             print(f"Error saving checkpoint: {e}")
 
@@ -135,7 +134,7 @@ for epoch in range(1000):
 
 # Saving the model
 try:
-    final_model_path = f"models/final_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    final_model_path = f"models/final_model_{datetime.now().strftime('%d%m%Y_%H%M%S')}"
     agent.save(final_model_path)
     print(f"\nFinal model saved: {final_model_path}")
 except Exception as e:
