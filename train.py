@@ -1,11 +1,11 @@
 import os
+from datetime import datetime
 import gymnasium as gym
 import ale_py
 from ray.tune import register_env
 from ray.tune.logger import pretty_print
 from ray.rllib.algorithms.dqn import DQNConfig
 from ray.rllib.models import ModelCatalog
-from sympy.abc import epsilon
 
 # Custom model
 from models import DQNModel
@@ -27,7 +27,23 @@ register_env(GAME, create_wrapped_env)
 # Register model in rllib
 ModelCatalog.register_custom_model('DQN_Model', DQNModel)
 
-# Policy configuration
+
+'''
+    Policy configuration
+        gamma: discount factor
+        lr: learning rate
+        dueling: enable dueling network (separate value and advantage streams)
+        double_q: use double Q-learning to improve q-value estimation
+        epsilon: epsilon-greedy exploration - decay from 1.0 to 0.1 over 100k steps, then to 0.01 over 400k steps
+        type: MultiAgentPrioritizedReplayBuffer: prioritized replay buffer
+        capacity: max capacity of transitions
+        prioritized_replay_alpha: how much prioritization is used (0: uniform sampling, 1: full prioritization)
+        prioritized_replay_beta: importance sampling exponent
+        prioritized_replay_eps: small value to avoid division by zero
+        target_network_update_freq: how often to update the target network
+        grad_clip: clip gradients to this value
+        num_steps_sampled_before_learning_starts: buffer before it starts learning - counting loss value
+'''
 config = (
     DQNConfig() # Policy: DQN
     .environment(GAME)
@@ -54,20 +70,65 @@ config = (
         },
         target_network_update_freq=1000,
         grad_clip=1.0,
+        num_steps_sampled_before_learning_starts=10000 # buffer before it starts learning - counting loss value
     )
 )
 
 # Build the actual agent
 agent = config.build()
 
-for epoch in range(100):
-    result = agent.train()
-    print(pretty_print(result))
+# For tracking progress
+best_reward = float('-inf')
+running_rewards = []
 
-    # Log rewards and losses
+for epoch in range(1000):
+    result = agent.train()
+
+    # Extract key metrics
     avg_reward = result['env_runners']['episode_reward_mean']
     avg_loss = result.get("info", {}).get("learner", {}).get("default_policy", {}).get("learner_stats", {}).get("loss",
                                                                                                                 "N/A")
-    print(f"Epoch {epoch}, Average Reward: {avg_reward}, Loss: {avg_loss}")
-    print(f"Replay Buffer Size: {agent.local_replay_buffer._num_added}")
 
+    # Get epsilon - fixed method
+    # epsilon = agent.get_policy().exploration.epsilon
+    q_values = result.get("info", {}).get("learner", {}).get("default_policy", {}).get("learner_stats", {}).get(
+        "mean_q", "N/A")
+
+    # Keep track of last 10 rewards for running average
+    running_rewards.append(avg_reward)
+    if len(running_rewards) > 10:
+        running_rewards.pop(0)
+    running_avg = sum(running_rewards) / len(running_rewards)
+
+    # Track best performance
+    if avg_reward > best_reward:
+        best_reward = avg_reward
+        print(f"\n>>> New best reward: {best_reward:.2f} <<<\n")
+
+    if epoch % 100 == 0:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        checkpoint_path = f"checkpoints/checkpoint_epoch{epoch}_{timestamp}"
+        try:
+            agent.save(checkpoint_path)
+            print(f"\nCheckpoint saved: {checkpoint_path}")
+        except Exception as e:
+            print(f"Error saving checkpoint: {e}")
+
+    # Print metrics in an organized way
+    print(f"\nEpoch {epoch}")
+    print(f"Avg. reward: {avg_reward:.2f}")
+    print(f"Running Avg (10 epochs): {running_avg:.2f}")
+    print(f"Loss: {avg_loss}")
+    print(f"Mean Q-Value: {q_values}")
+    print(f"Buffer Size: {agent.local_replay_buffer._num_added}")
+    print(f"Best Reward So Far: {best_reward:.2f}")
+    print("---------------")
+
+
+# Saving the model
+try:
+    final_model_path = f"models/final_model_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    agent.save(final_model_path)
+    print(f"\nFinal model saved: {final_model_path}")
+except Exception as e:
+    print(f"Error saving final model: {e}")
