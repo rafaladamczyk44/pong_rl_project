@@ -37,12 +37,22 @@ class DQNModel(TorchModelV2, nn.Module):
         self.fc_bn = nn.BatchNorm1d(512)
         self.fc2 = nn.Linear(512, num_outputs)
 
+        # Initialize optimizer and scheduler
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimizer,
+            mode='max',
+            factor=0.5,
+            patience=5,
+            min_lr=1e-6
+        )
+
     def forward(self, input_dict, state, seq_lens):
         """
         Passing the observations
-        Observation dict is of shape: torch.Size([32, 84, 84, 4])
-        Need to permute it to batch, channel, height, width for Conv layers
         """
+        # Observation dict is of shape: torch.Size([32, 84, 84, 4])
+        # Permute the matrix
         x = input_dict['obs'].permute(0, 3, 1, 2).float() / 255.0  # Added normalization
 
         x = self.bn1(self.relu(self.conv1(x)))
