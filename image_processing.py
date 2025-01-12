@@ -29,19 +29,30 @@ class ImageWrapper(Wrapper):
         Execute action and skip frames while accumulating rewards
         """
         total_reward = 0
-        done = False
+        terminated = False
+        truncated = False
         info = {}
 
         # Execute the same action for skip_frames steps
         for _ in range(self.skip_frames):
-            obs, reward, done, info = self.env.step(action)
+            obs, reward, terminated, truncated, info = self.env.step(action)
             total_reward += reward
-            if done:
+            # Break if the episode ended either way
+            if terminated or truncated:
                 break
 
         # Process the last observed frame
         processed_obs = self.observation(obs)
-        return processed_obs, total_reward, done, info
+        return processed_obs, total_reward, terminated, truncated, info
+
+    def reset(self, **kwargs):
+        """
+        Reset the environment to start a new episode
+        Also needed to be updated for new Gymnasium API
+        """
+        obs, info = self.env.reset(**kwargs)
+        processed_obs = self.observation(obs)
+        return processed_obs, info
 
     def observation(self, obs):
 
