@@ -1,4 +1,4 @@
-import os
+# import os
 from datetime import datetime
 import gymnasium as gym
 import ale_py
@@ -46,7 +46,7 @@ DQN Policy configuration
 # Env config
 BATCH_SIZE = 64
 ENV_RUNNERS = 4
-BUFFER_CAPACTIY = 100000
+BUFFER_CAPACITY = 100000
 
 # DQN config
 discount_factor = 0.99
@@ -72,7 +72,7 @@ config = (
             train_batch_size=BATCH_SIZE,
             replay_buffer_config={
                 "type": "MultiAgentPrioritizedReplayBuffer",
-                "capacity": BUFFER_CAPACTIY,
+                "capacity": BUFFER_CAPACITY,
                 "prioritized_replay_alpha": 0.7,
                 "prioritized_replay_beta": 0.5,
                 "prioritized_replay_eps": 1e-6,
