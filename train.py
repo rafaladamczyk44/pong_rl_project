@@ -51,7 +51,7 @@ BUFFER_CAPACITY = 100000
 # DQN config
 discount_factor = 0.99
 learning_rate = 1e-4
-epsilon_decay_rate = [[0, 1.0], [100000, 0.1], [500000, 0.01]]
+# epsilon_decay_rate = [[0, 1.0], [100000, 0.1], [500000, 0.01]]
 
 config = (
     DQNConfig()
@@ -63,12 +63,13 @@ config = (
             )
         .env_runners(num_env_runners=ENV_RUNNERS)
         .training(
+
             model={'custom_model': 'DQN_Model'},
             gamma=discount_factor,
             lr=learning_rate,
             dueling=True,
             double_q=True,
-            epsilon=epsilon_decay_rate,
+            # epsilon=epsilon_decay_rate, not needed when using noisy network
             train_batch_size=BATCH_SIZE,
             replay_buffer_config={
                 "type": "MultiAgentPrioritizedReplayBuffer",

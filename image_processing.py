@@ -6,10 +6,15 @@ import numpy as np
 import collections
 
 class ImageWrapper(Wrapper):
-    def __init__(self, env, shape=(84, 84), frame_stack=4):
+    """
+    Customer image wrapper for pong
+    """
+    def __init__(self, env, shape=(84, 84), frame_stack=4, skip_frames=4):
         super(ImageWrapper, self).__init__(env)
         self.shape = shape
         self.frame_stack = frame_stack
+        # Skipping frames implementation to save comp power
+        self.skip_frames = skip_frames
         self.frames = collections.deque(maxlen=frame_stack)
 
         self.observation_space = Box(
@@ -19,13 +24,43 @@ class ImageWrapper(Wrapper):
             dtype=np.uint8
         )
 
+    def step(self, action):
+        """
+        Execute action and skip frames while accumulating rewards
+        """
+        total_reward = 0
+        done = False
+        info = {}
+
+        # Execute the same action for skip_frames steps
+        for _ in range(self.skip_frames):
+            obs, reward, done, info = self.env.step(action)
+            total_reward += reward
+            if done:
+                break
+
+        # Process the last observed frame
+        processed_obs = self.observation(obs)
+        return processed_obs, total_reward, done, info
+
     def observation(self, obs):
+
+        """
+        Process observation and change to correct form
+        :param obs: Take a single observation from the game
+        :return: Processed observation
+        """
         # Convert to grayscale
         gray_obs = cv2.cvtColor(obs, cv2.COLOR_RGB2GRAY)
         # Resize the image
         resized_obs = cv2.resize(gray_obs, self.shape, interpolation=cv2.INTER_AREA)
         # Add the frame to the deque
         self.frames.append(resized_obs)
+
+        # If we don't have enough frames yet, duplicate the current frame
+        while len(self.frames) < self.frame_stack:
+            self.frames.append(resized_obs)
+
         # Stack frames and return the observation
         stacked_obs = np.stack(list(self.frames), axis=-1)  # Shape: (84, 84, frame_stack)
         return stacked_obs
