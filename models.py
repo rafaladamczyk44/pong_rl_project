@@ -2,11 +2,13 @@ import torch
 import torch.nn as nn
 from ray.rllib.core.models.configs import ModelConfig
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
+from noisy_net import NoisyLinear
 
 class DQNModel(TorchModelV2, nn.Module):
     def __init__(self, observation_space, action_space, num_outputs, model_config:dict, name:str):
         """
-        My custom model for DQN learning of playing Pong
+        My custom model for DQN learning of playing Pong.
+        Implemented NoisyNet paper into last 2 layers of the net for enhanced training
 
         :param observation_space: Current state of the game at each timestamp
         :param action_space: Available actions to take by the agent (6 in Pong)
@@ -20,7 +22,7 @@ class DQNModel(TorchModelV2, nn.Module):
         input_shape = observation_space.shape  # 84 x 84 x 4
         input_shape = input_shape[-1]  # Only taking channel value
 
-        # ReLu acitvation
+        # ReLu activation
         self.relu = nn.ReLU()
 
         # Conv layers + batch norm
@@ -32,9 +34,9 @@ class DQNModel(TorchModelV2, nn.Module):
         self.bn3 = nn.BatchNorm2d(64)
 
         # FC Network
-        self.fc1 = nn.Linear(7 * 7 * 64, 512)
+        self.fc1 = NoisyLinear(7 * 7 * 64, 512)
         self.fc_bn = nn.BatchNorm1d(512)
-        self.fc2 = nn.Linear(512, num_outputs)
+        self.fc2 = NoisyLinear(512, num_outputs)
 
         # Initialize optimizer and scheduler
         self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-4)
@@ -45,6 +47,11 @@ class DQNModel(TorchModelV2, nn.Module):
             patience=5,
             min_lr=1e-6
         )
+
+
+    def reset_noise(self):
+        self.fc1.reset_noise()
+        self.fc2.reset_noise()
 
     def forward(self, input_dict, state, seq_lens):
         """
