@@ -73,13 +73,13 @@ config = (
             replay_buffer_config={
                 "type": "MultiAgentPrioritizedReplayBuffer",
                 "capacity": BUFFER_CAPACTIY,
-                "prioritized_replay_alpha": 0.6,
-                "prioritized_replay_beta": 0.4,
+                "prioritized_replay_alpha": 0.7,
+                "prioritized_replay_beta": 0.5,
                 "prioritized_replay_eps": 1e-6,
             },
             target_network_update_freq=1000,
             grad_clip=1.0,
-            num_steps_sampled_before_learning_starts=10000
+            #num_steps_sampled_before_learning_starts=10000
         )
 )
 
